@@ -1,0 +1,84 @@
+# config/config.yaml
+# Основная конфигурация Case 10 Pipeline
+
+# --- Входные источники (IMAP) ---
+imap:
+  host: "{{ IMAP_HOST }}"
+  port: 993
+  ssl: true
+  user: "{{ IMAP_USER }}"
+  password: "{{ IMAP_PASSWORD }}"
+  # Папки для поиска писем с поручениями
+  folders:
+    - INBOX
+  # Фильтры поиска
+  search_criteria:
+    from: ""
+    subject: "[Задача]"
+    since_days: 7
+
+# --- Организационная структура ---
+organization:
+  structure_file: "config/org_structure.yaml"
+
+# --- Jira ---
+jira:
+  url: "{{ JIRA_URL }}"
+  username: "{{ JIRA_USERNAME }}"
+  api_token: "{{ JIRA_API_TOKEN }}"
+  cloud: true
+  project: "TASKS"
+  # Тип задачи по умолчанию
+  issue_type: "Task"
+  # Маппинг приоритетов
+  priorities:
+    high: "High"
+    medium: "Medium"
+    low: "Low"
+
+# --- Confluence ---
+confluence:
+  url: "{{ CONFLUENCE_URL }}"
+  username: "{{ CONFLUENCE_USERNAME }}"
+  api_token: "{{ CONFLUENCE_API_TOKEN }}"
+  cloud: true
+  space: "TASKS"
+  # Родительская страница для протоколов (опционально)
+  parent_page_title: "Протоколы поручений"
+
+# --- Уведомления ---
+notifications:
+  channels:
+    - telegram
+    # - mattermost
+    # - email
+  telegram:
+    bot_token: "{{ TELEGRAM_BOT_TOKEN }}"
+    chat_id: "{{ TELEGRAM_CHAT_ID }}"
+  mattermost:
+    webhook_url: "{{ MATTERMOST_WEBHOOK_URL }}"
+  email:
+    smtp_host: "{{ SMTP_HOST }}"
+    smtp_port: 587
+    smtp_user: "{{ SMTP_USER }}"
+    smtp_password: "{{ SMTP_PASSWORD }}"
+    from: "{{ SMTP_FROM }}"
+
+# --- LLM ---
+llm:
+  provider: "openrouter"
+  model: "google/gemini-2.0-flash-001"
+  # Альтернативы:
+  # - "microsoft/nemotron-mini-4b-instruct" (бесплатно)
+  # - "anthropic/claude-3-haiku"
+  temperature: 0.1
+  max_tokens: 4096
+
+# --- Поведение ---
+settings:
+  # Создавать задачи только для валидных поручений
+  create_tickets_only_valid: true
+  # Отправлять уведомления о заблокированных поручениях
+  notify_on_blocked: true
+  # Язык протокола (ru / en)
+  protocol_language: ru

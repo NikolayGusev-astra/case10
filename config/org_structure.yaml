@@ -1,0 +1,121 @@
+# config/org_structure.yaml
+# Организационная структура для валидации поручений.
+#
+# Формат:
+#   employees:
+#     - login:     <уникальный логин сотрудника>
+#       name:      <полное имя>
+#       role:      <должность>
+#       team:      <название отдела / команды>
+#       manager:   <логин руководителя> | null
+#       subordinates:
+#         - <логин подчинённого 1>
+#         - <логин подчинённого 2>
+#
+# Порядок валидации:
+#   - Руководитель -> подчинённый: ✅ валидно, задача создаётся
+#   - Разные отделы:               ⚠️ требуется подтверждение
+#   - Подчинённый -> руководитель: ❌ заблокировано
+#   - Нет полномочий:              ❌ заблокировано
+#
+# Замените сотрудников на вашу реальную структуру.
+
+employees:
+  # --- Руководство компании ---
+  - login: "a.ivanov"
+    name: "Александр Иванов"
+    role: "Генеральный директор"
+    team: "Руководство"
+    manager: null
+    subordinates:
+      - "e.petrova"
+      - "s.sidorov"
+
+  # --- Заместители / Руководители направлений ---
+  - login: "e.petrova"
+    name: "Елена Петрова"
+    role: "Директор по разработке"
+    team: "Разработка"
+    manager: "a.ivanov"
+    subordinates:
+      - "i.kuznetsov"
+      - "m.fedorov"
+
+  - login: "s.sidorov"
+    name: "Сергей Сидоров"
+    role: "Директор по продукту"
+    team: "Продукт"
+    manager: "a.ivanov"
+    subordinates:
+      - "o.vasilyeva"
+
+  # --- Отдел разработки ---
+  - login: "i.kuznetsov"
+    name: "Иван Кузнецов"
+    role: "Team Lead Backend"
+    team: "Разработка"
+    manager: "e.petrova"
+    subordinates:
+      - "d.popov"
+      - "n.sokolova"
+
+  - login: "m.fedorov"
+    name: "Михаил Фёдоров"
+    role: "Team Lead Frontend"
+    team: "Разработка"
+    manager: "e.petrova"
+    subordinates:
+      - "a.volkov"
+
+  - login: "d.popov"
+    name: "Дмитрий Попов"
+    role: "Backend-разработчик"
+    team: "Разработка"
+    manager: "i.kuznetsov"
+    subordinates: []
+
+  - login: "n.sokolova"
+    name: "Наталья Соколова"
+    role: "Backend-разработчик"
+    team: "Разработка"
+    manager: "i.kuznetsov"
+    subordinates: []
+
+  - login: "a.volkov"
+    name: "Алексей Волков"
+    role: "Frontend-разработчик"
+    team: "Разработка"
+    manager: "m.fedorov"
+    subordinates: []
+
+  # --- Отдел продукта ---
+  - login: "o.vasilyeva"
+    name: "Ольга Васильева"
+    role: "Продукт-менеджер"
+    team: "Продукт"
+    manager: "s.sidorov"
+    subordinates:
+      - "k.zaitsev"
+
+  - login: "k.zaitsev"
+    name: "Константин Зайцев"
+    role: "Аналитик"
+    team: "Продукт"
+    manager: "o.vasilyeva"
+    subordinates: []
+
+  # --- QA ---
+  - login: "t.morozova"
+    name: "Татьяна Морозова"
+    role: "QA Lead"
+    team: "QA"
+    manager: null
+    subordinates:
+      - "v.lebedev"
+
+  - login: "v.lebedev"
+    name: "Виктор Лебедев"
+    role: "QA Инженер"
+    team: "QA"
+    manager: "t.morozova"
+    subordinates: []
