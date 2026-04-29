@@ -198,3 +198,37 @@ class TestNotifier:
     def test_unknown_channel(self):
         from tools.notifier import notify_all
         assert notify_all("test", channels=["nonexistent"]) == {"nonexistent": False}
+
+
+# ===================================================================
+# Tests: Memory Indexer (stub tests — no HippoRAG in CI)
+# ===================================================================
+
+class TestMemoryIndexer:
+
+    def test_stats_no_init(self):
+        """memory_stats should not crash when HippoRAG not installed."""
+        from tools.memory_indexer import memory_stats
+        stats = memory_stats()
+        assert isinstance(stats, dict)
+        assert "available" in stats
+
+    def test_reset_no_init(self):
+        """reset_memory should not crash when HippoRAG not installed."""
+        from tools.memory_indexer import reset_memory
+        result = reset_memory()
+        assert result.get("ok")
+
+    def test_index_no_hipporag(self):
+        """index_document returns error gracefully when HippoRAG missing."""
+        from tools.memory_indexer import index_document
+        result = index_document("test text")
+        assert not result.get("ok")
+        assert "error" in result
+
+    def test_query_no_hipporag(self):
+        """query_memory returns error gracefully when HippoRAG missing."""
+        from tools.memory_indexer import query_memory
+        result = query_memory("test question")
+        assert not result.get("ok")
+        assert "error" in result

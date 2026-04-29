@@ -70,8 +70,25 @@ python -m tools.pipeline --audio meeting.wav --json
 ## Команды навыка Hermes
 
 - `/case10 run --input <file>` — полный pipeline
+- `/case10 run --input <file> --memory` — pipeline + индексация в HippoRAG
 - `/case10 run --video <file>` — со STT
+- `/case10 query <вопрос>` — поиск по графу памяти HippoRAG
+- `/case10 stats` — статистика памяти
+- `/case10 reset` — сброс индекса
 - `/case10 status` — проверить конфигурацию
+
+## HippoRAG Memory
+
+При запуске с `--memory` каждый документ индексируется в граф знаний.
+HLlm извлекает триплеты, которые соединяются рёбрами по смыслу.
+PPR (Personalized PageRank) позволяет находить связанные документы через 2-3 шага.
+
+Запросы:
+```bash
+python -m tools.pipeline query "Что поручал Сергей?"
+python -m tools.pipeline query "Какой статус по лендингу?"
+python -m tools.pipeline stats
+```
 
 ## Бюджет
 

@@ -187,16 +187,65 @@ def notify(assignments: list, channels: Optional[list] = None) -> dict:
 
 def main(argv: Optional[list] = None) -> int:
     parser = argparse.ArgumentParser(description="Case 10 pipeline")
-    parser.add_argument("--input", help="Path to text file with meeting transcript")
-    parser.add_argument("--video", help="Path to video file (will transcribe via STT)")
-    parser.add_argument("--audio", help="Path to audio file (will transcribe via STT)")
-    parser.add_argument("--org", default="config/org_structure.yaml", help="Org structure YAML")
-    parser.add_argument("--jira", action="store_true", help="Create Jira tickets")
-    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    sub = parser.add_subparsers(dest="command", help="Subcommands")
+
+    # --- run (default) ---
+    run_p = parser  # backwards compat
+    run_p.add_argument("--input", help="Path to text file with meeting transcript")
+    run_p.add_argument("--video", help="Path to video file (will transcribe via STT)")
+    run_p.add_argument("--audio", help="Path to audio file (will transcribe via STT)")
+    run_p.add_argument("--org", default="config/org_structure.yaml", help="Org structure YAML")
+    run_p.add_argument("--jira", action="store_true", help="Create Jira tickets")
+    run_p.add_argument("--memory", action="store_true", help="Index into HippoRAG memory")
+    run_p.add_argument("--json", action="store_true", help="Output as JSON")
+
+    # --- query ---
+    query_p = sub.add_parser("query", help="Query HippoRAG memory")
+    query_p.add_argument("question", nargs="+", help="Question to ask")
+
+    # --- stats ---
+    sub.add_parser("stats", help="Memory statistics")
+
+    # --- reset ---
+    sub.add_parser("reset", help="Reset memory index")
 
     args = parser.parse_args(argv)
 
-    # Load text
+    # --- Subcommands ---
+    if args.command == "query":
+        question = " ".join(args.question)
+        logger.info("Querying memory: %s", question)
+        from tools.memory_indexer import query_memory
+        result = query_memory(question)
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+        else:
+            print(f"\n{'='*60}")
+            print(f"Вопрос: {question}")
+            print(f"{'='*60}")
+            if result.get("answer"):
+                print(f"Ответ: {result['answer']}")
+            if result.get("passages"):
+                print(f"\nИсточники ({len(result['passages'])}):")
+                for i, p in enumerate(result["passages"][:5], 1):
+                    print(f"  {i}. {str(p)[:200]}")
+            if result.get("error"):
+                print(f"Ошибка: {result['error']}")
+        return 0
+
+    if args.command == "stats":
+        from tools.memory_indexer import memory_stats
+        stats = memory_stats()
+        print(json.dumps(stats, ensure_ascii=False, indent=2, default=str))
+        return 0
+
+    if args.command == "reset":
+        from tools.memory_indexer import reset_memory
+        result = reset_memory()
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    # --- Default: run pipeline ---
     text = None
     if args.input:
         text = load_text(args.input)
@@ -240,7 +289,17 @@ def main(argv: Optional[list] = None) -> int:
     if args.jira:
         tickets = create_jira_tickets(validated)
 
-    # Step 4: Notify
+    # Step 4: Index into HippoRAG memory (if requested)
+    if args.memory:
+        logger.info("Indexing into HippoRAG memory...")
+        from tools.memory_indexer import index_document
+        mem_result = index_document(text, doc_id=f"run-{int(time.time())}")
+        if mem_result.get("ok"):
+            logger.info("Memory index: %s", mem_result)
+        else:
+            logger.warning("Memory indexing skipped: %s", mem_result.get("error"))
+
+    # Step 5: Notify
     notification_results = notify(validated)
 
     # Build result
