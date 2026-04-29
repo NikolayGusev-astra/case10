@@ -1,87 +1,69 @@
 # Case 10 — Формирование задач из неструктурированных данных
 
-**Hermes Agent pipeline** для автоматического извлечения поручений из email, стенограмм встреч, протоколов и заметок.
+**CPU-first pipeline.** Никаких LLM для основной работы. STT через faster-whisper, NER через natasha, парсинг — regex.
 
 ## Pipeline
 
 ```
-Любой текст → LLM-парсинг → валидация по оргструктуре → Jira задачи →
-Confluence протокол → уведомления TG/MM/Email
-```
-
-## Установка
-
-```bash
-git clone git@github.com:NikolayGusev-astra/case10.git
-cd case10
-bash install.sh
-```
-
-Или одной командой:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/NikolayGusev-astra/case10/main/install.sh | bash
+Любой источник (текст / аудио / видео)
+  → STT (faster-whisper, CPU int8) ← если аудио/видео
+  → natasha NER (имена, даты)
+  → regex-паттерны (5 типов конструкций)
+  → валидация по оргструктуре (граф, BFS)
+  → Jira задачи / Confluence протокол
+  → уведомления Telegram / Mattermost / Email
+  → LLM fallback (опционально, если правила ничего не нашли)
 ```
 
 ## Быстрый старт
 
 ```bash
-# 1. Настройка
-cp config/.env.example .env
-# отредактируйте .env — укажите API-ключи
+git clone git@github.com:NikolayGusev-astra/case10.git
+cd case10
+bash install.sh
 
-# 2. Оргструктура
-# отредактируйте config/org_structure.yaml — ваши сотрудники
+# Текстовый файл
+python -m tools.pipeline --input sample.txt
 
-# 3. Тест
-make test
+# Аудио/видео (требуется faster-whisper)
+python -m tools.pipeline --video meeting.mp4
+python -m tools.pipeline --audio call.wav --json
 
-# 4. Запуск с файлом
-cd case10 && source .venv/bin/activate
-python -m tools.case10_pipeline --input sample.txt --org config/org_structure.yaml --config config/config.yaml
+# С валидацией по оргструктуре
+python -m tools.pipeline --input sample.txt --org config/org_structure.yaml
 ```
 
-## Через Hermes Agent
-
-```bash
-hermes -s case10
-```
-
-В сессии:
-```
-/case10 run --input стенограмма.txt
-/case10 parse --input письмо.txt
-/case10 status
-```
-
-## Структура репозитория
+## Структура
 
 ```
-├── tools/
-│   ├── case10_pipeline.py    # Оркестратор pipeline
-│   ├── org_validator.py      # Валидация оргструктуры
-│   ├── jira_bridge.py        # Jira + Confluence API
-│   └── notifier.py           # Уведомления (TG/MM/Email)
-├── config/
-│   ├── config.yaml           # Основная конфигурация
-│   ├── org_structure.yaml    # Оргструктура (шаблон)
-│   └── .env.example          # Переменные окружения
-├── tests/
-│   └── test_pipeline.py      # Тесты с mock-данными
-├── SKILL.md                  # Описание навыка Hermes
-├── install.sh                # Установщик
-├── Makefile                  # Цели сборки/тестов
-└── README.md                 # Этот файл
+tools/
+├── pipeline.py         # Оркестратор
+├── stt.py              # faster-whisper STT (CPU)
+├── ner_parser.py       # natasha NER + regex (5 паттернов)
+├── org_validator.py    # Валидация по оргструктуре
+├── jira_bridge.py      # Jira + Confluence API
+├── notifier.py         # Telegram / Mattermost / Email
+└── llm_fallback.py     # OpenRouter (опционально)
 ```
 
-## Бюджет LLM
+## Поддерживаемые паттерны поручений
 
-| Статья | Расчёт | Стоимость |
-|--------|--------|-----------|
-| VPS | 4 vCPU, 4 GB, 20 GB SSD | 1 500–2 500 ₽/мес |
-| OpenRouter Gemini 3 Flash | 50 встреч × ~$0.20 | ~800 ₽/мес |
-| OpenRouter Nemotron (free) | Бесплатный | 0 ₽/мес |
-| Итого | Gemini Flash | ~2 500–3 500 ₽/мес |
-| Итого | Nemotron free | ~1 500–2 700 ₽/мес |
+| Паттерн | Пример |
+|---------|--------|
+| Императив | `Сергей, подготовь отчёт до пятницы` |
+| Потребность | `Владимир, нужен доступ к серверу` |
+| Стрелка | `Иванов -> Петров: провести аудит` |
+| Тире | `Иванову — сделать отчёт до 15.05` |
+| Дательный | `Поручить Кузнецову — обновить доки` |
+| Стенограмма | `— Дим, подготовь тексты до четверга` |
 
-© 2026 — Hermes Agent × GenII
+## Требования к VPS
+
+| Компонент | Минимум | Рекомендуется |
+|-----------|---------|---------------|
+| CPU | 2 vCPU | 4 vCPU |
+| RAM | 2 GB | 4 GB |
+| Диск | 10 GB | 20 GB SSD |
+| Модели | faster-whisper tiny + natasha | ~600 MB |
+
+© 2026 — Hermes Assistant
